@@ -31,6 +31,7 @@ class PostureService:
         self.model: Optional[PostureLSTM] = None
         self.frame_buffer: deque = deque(maxlen=settings.WINDOW_SIZE)
         self.frame_count = 0
+        self.baseline_features: Optional[np.ndarray] = None
         self._load_model()
 
     def _load_model(self):
@@ -101,9 +102,17 @@ class PostureService:
         return None
 
     def _predict(self) -> dict:
-        """Run LSTM inference on the current buffer."""
-        if self.model is None:
-            return self._rule_based_prediction()
+        """Run inference on the current buffer."""
+        if self.baseline_features is None:
+            return {
+                "posture_class": "needs_calibration",
+                "confidence": 1.0,
+                "all_probs": {},
+            }
+        
+        return self._calibrated_prediction()
+
+
 
         try:
             # Create input tensor: (1, window_size, features)
@@ -133,6 +142,61 @@ class PostureService:
         except Exception as e:
             logger.error(f"Inference failed: {e}")
             return self._rule_based_prediction()
+
+    def calibrate(self):
+        """Set the current frame buffer average as the Good Posture Baseline."""
+        if len(self.frame_buffer) > 0:
+            # Average the features in the current window to get a stable baseline
+            self.baseline_features = np.mean(list(self.frame_buffer), axis=0)
+            logger.info("Posture baseline calibrated successfully.")
+            return True
+        return False
+
+    def _calibrated_prediction(self) -> dict:
+        """Prediction based on offset from the user's calibrated baseline."""
+        latest = self.frame_buffer[-1]
+        diff = latest - self.baseline_features
+
+        # Nose Y (0=x, 1=y, 2=z, etc.)
+        # 0: nose_x, 1: nose_y, 2: nose_z
+        nose_y_diff = diff[1] 
+        nose_x_diff = diff[0]
+        
+        # Shoulder symmetry feature is index 46
+        # Shoulder tilt angle is index 43
+        shoulder_tilt_diff = diff[43]
+        
+        # Nose Z (depth)
+        nose_z_diff = diff[2]
+
+        posture = "good_posture"
+        confidence = 0.85
+
+        # Heuristics for Webcam (Webcam Y goes down, so +Y means moving down in frame)
+        # Z comes closer (negative) and Y goes down -> Forward lean
+        if nose_z_diff < -0.15 or nose_y_diff > 0.08:
+            posture = "forward_lean"
+        elif nose_z_diff > 0.15 or nose_y_diff < -0.05:
+            posture = "backward_lean"
+        elif shoulder_tilt_diff > 5 or nose_x_diff > 0.1:
+            posture = "left_lean"
+        elif shoulder_tilt_diff < -5 or nose_x_diff < -0.1:
+            posture = "right_lean"
+
+        probs = {
+            "good_posture": 0.1,
+            "forward_lean": 0.1,
+            "backward_lean": 0.1,
+            "left_lean": 0.1,
+            "right_lean": 0.1,
+        }
+        probs[posture] = confidence
+
+        return {
+            "posture_class": posture,
+            "confidence": confidence,
+            "all_probs": probs,
+        }
 
     def _rule_based_prediction(self) -> dict:
         """Fallback rule-based prediction when model is unavailable.

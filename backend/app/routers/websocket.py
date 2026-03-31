@@ -38,8 +38,28 @@ async def pose_websocket(websocket: WebSocket):
 
     try:
         while True:
-            # Receive frame as binary data
-            data = await websocket.receive_bytes()
+            # Receive message (either frame bytes or text command)
+            msg = await websocket.receive()
+            if "text" in msg:
+                try:
+                    cmd = json.loads(msg["text"])
+                    if cmd.get("action") == "calibrate":
+                        success = posture_service.calibrate()
+                        if success:
+                            health_service.reset()
+                        await websocket.send_json({
+                            "type": "calibration_result", 
+                            "success": success,
+                            "message": "Calibrated successfully!" if success else "Need more frames to calibrate."
+                        })
+                except Exception as e:
+                    logger.error(f"Failed parsing text message: {e}")
+                continue
+
+            if "bytes" not in msg:
+                continue
+                
+            data = msg["bytes"]
             frame_count += 1
 
             # Extract pose landmarks
@@ -86,7 +106,7 @@ async def pose_websocket(websocket: WebSocket):
                     "class": prediction["posture_class"],
                     "confidence": prediction["confidence"],
                     "probabilities": prediction.get("all_probs", {}),
-                    "is_good": prediction["posture_class"] == "good_posture",
+                    "is_good": prediction["posture_class"] in ["good_posture", "needs_calibration"],
                 }
                 response["health_risks"] = [
                     {

@@ -64,6 +64,12 @@ export default function useWebSocket() {
     }
   }, []);
 
+  const sendCommand = useCallback((cmd) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(cmd));
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -77,5 +83,6 @@ export default function useWebSocket() {
     connect,
     disconnect,
     sendFrame,
+    sendCommand,
   };
 }

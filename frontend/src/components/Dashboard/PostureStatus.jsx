@@ -1,7 +1,7 @@
 /**
  * PostureStatus component - displays current posture with animated confidence ring.
  */
-export default function PostureStatus({ posture }) {
+export default function PostureStatus({ posture, onCalibrate }) {
   if (!posture) {
     return (
       <div className="glass-card posture-status" id="posture-status">
@@ -68,6 +68,30 @@ export default function PostureStatus({ posture }) {
       <p className="posture-status__description">
         {meta?.description || "Analyzing your posture..."}
       </p>
+
+      {/* Calibration Button */}
+      {posture.class === "needs_calibration" && (
+        <button 
+          className="button button--primary" 
+          onClick={onCalibrate}
+          style={{ width: '100%', marginTop: '1rem' }}
+        >
+          <span className="button__icon">🎯</span>
+          Calibrate Now
+        </button>
+      )}
+
+      {/* Recalibrate Button (Always available if already calibrated and not in needs_calibration) */}
+      {posture.class !== "needs_calibration" && (
+        <button 
+          className="button button--outline" 
+          onClick={onCalibrate}
+          style={{ width: '100%', marginTop: '1rem', padding: '0.5rem', fontSize: '0.9rem' }}
+        >
+          <span className="button__icon">🔄</span>
+          Recalibrate
+        </button>
+      )}
 
       {/* Probability Bars */}
       {sortedProbs.length > 0 && (

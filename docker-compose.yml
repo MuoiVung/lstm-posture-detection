@@ -22,10 +22,11 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      - ./backend/app:/app/app
       - ./backend/app/ml/weights:/app/ml/weights
       - ./backend/data:/app/data
     environment:
-      - DATABASE_URL=sqlite:///./data/posture.db
+      - DATABASE_URL=sqlite+aiosqlite:///./data/posture.db
       - MODEL_PATH=/app/ml/weights/posture_lstm.pth
       - CORS_ORIGINS=http://localhost:3000
     networks:

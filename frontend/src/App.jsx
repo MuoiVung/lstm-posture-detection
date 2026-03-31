@@ -39,6 +39,10 @@ export default function App() {
     }
   }, [isActive, ws, analysis]);
 
+  const handleCalibrate = useCallback(() => {
+    ws.sendCommand({ action: "calibrate" });
+  }, [ws]);
+
   return (
     <div className="app-layout">
       <Header
@@ -75,7 +79,10 @@ export default function App() {
 
         {/* Right Column: Dashboard */}
         <div className="right-panel">
-          <PostureStatus posture={analysis.currentPosture} />
+          <PostureStatus 
+            posture={analysis.currentPosture} 
+            onCalibrate={handleCalibrate}
+          />
           <HealthRisks risks={analysis.healthRisks} />
           <TipsSection />
         </div>
