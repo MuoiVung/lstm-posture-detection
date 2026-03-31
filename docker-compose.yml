@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - posture-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app/ml/weights:/app/ml/weights
+      - ./backend/data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///./data/posture.db
+      - MODEL_PATH=/app/ml/weights/posture_lstm.pth
+      - CORS_ORIGINS=http://localhost:3000
+    networks:
+      - posture-net
+
+  training:
+    build:
+      context: ./training
+      dockerfile: Dockerfile
+    volumes:
+      - ./training/data:/app/data
+      - ./training/outputs:/app/outputs
+      - ./training/config:/app/config
+    environment:
+      - DEVICE=auto
+    profiles:
+      - training
+    networks:
+      - posture-net
+
+networks:
+  posture-net:
+    driver: bridge

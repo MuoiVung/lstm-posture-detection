@@ -1,0 +1,53 @@
+# Training Configuration for PostureLSTM
+
+model:
+  input_size: 49          # Number of features per frame (13 joints × 3 coords + 10 engineered)
+  hidden_size: 128        # LSTM hidden units
+  num_layers: 2           # Stacked LSTM layers
+  num_classes: 5          # Posture classes (from Zenodo MultiPosture)
+  dropout: 0.3            # LSTM dropout
+  fc_dropout: 0.4         # Fully connected dropout
+  bidirectional: true     # Bidirectional LSTM
+
+data:
+  window_size: 30         # Number of frames per sequence
+  stride: 5              # Sliding window stride
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  num_workers: 4
+  augmentation:
+    noise_std: 0.01       # Gaussian noise standard deviation
+    scale_range: [0.95, 1.05]  # Random scaling range
+
+training:
+  batch_size: 32
+  epochs: 100
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  optimizer: adam
+  scheduler:
+    type: reduce_on_plateau
+    factor: 0.5
+    patience: 5
+    min_lr: 0.00001
+  early_stopping:
+    patience: 15
+    min_delta: 0.001
+
+# Device selection: auto will pick mps (Apple Silicon), cuda (NVIDIA), or cpu
+device: auto
+
+# Posture class labels
+classes:
+  - good_posture
+  - forward_lean
+  - backward_lean
+  - left_lean
+  - right_lean
+
+# Logging
+logging:
+  tensorboard: true
+  log_interval: 10        # Log every N batches
+  save_interval: 5        # Save checkpoint every N epochs
