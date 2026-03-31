@@ -3,14 +3,13 @@ import { CAPTURE_INTERVAL_MS, JPEG_QUALITY, POSE_CONNECTIONS } from "../../utils
 
 /**
  * CameraFeed component - captures webcam frames and sends them via WebSocket.
- * Also renders pose skeleton overlay and calibration overlay.
+ * Also renders pose skeleton overlay.
  */
 export default function CameraFeed({
   isActive,
   sendFrame,
   landmarks,
   postureClass,
-  children,
 }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -88,7 +87,7 @@ export default function CameraFeed({
 
   const captureAndSend = useCallback(() => {
     if (!videoRef.current || !captureCanvasRef.current || !sendFrame) return;
-    if (isEncoding.current) return; // Prevent overlapped encoding
+    if (isEncoding.current) return;
 
     const video = videoRef.current;
     const canvas = captureCanvasRef.current;
@@ -172,33 +171,33 @@ export default function CameraFeed({
   };
 
   return (
-    <div className="camera-container" id="camera-container">
-      {isActive ? (
-        <>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            style={{ transform: "scaleX(-1)" }}
-          />
-          <canvas
-            ref={canvasRef}
-            style={{ transform: "scaleX(-1)" }}
-          />
-        </>
-      ) : (
-        <div className="camera-placeholder">
-          <span className="camera-placeholder__icon">📷</span>
-          <span className="camera-placeholder__text">
-            Click "Start & Calibrate" to begin
-          </span>
-        </div>
-      )}
-      {/* Calibration overlay renders as children */}
-      {children}
-      {/* Hidden canvas for frame capture */}
-      <canvas ref={captureCanvasRef} style={{ display: "none" }} />
+    <div className="camera-section">
+      <div className="camera-container" id="camera-container">
+        {isActive ? (
+          <>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{ transform: "scaleX(-1)" }}
+            />
+            <canvas
+              ref={canvasRef}
+              style={{ transform: "scaleX(-1)" }}
+            />
+          </>
+        ) : (
+          <div className="camera-placeholder">
+            <span className="camera-placeholder__icon">📷</span>
+            <span className="camera-placeholder__text">
+              Click "Start Monitoring" to begin
+            </span>
+          </div>
+        )}
+        {/* Hidden canvas for frame capture */}
+        <canvas ref={captureCanvasRef} style={{ display: "none" }} />
+      </div>
     </div>
   );
 }

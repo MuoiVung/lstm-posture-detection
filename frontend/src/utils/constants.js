@@ -41,12 +41,6 @@ export const POSTURE_CLASSES = {
     color: "danger",
     description: "Your head is too far forward. Pull your chin back.",
   },
-  needs_calibration: {
-    label: "Need Calibration",
-    emoji: "🎯",
-    color: "warning",
-    description: "Please sit up straight and click Calibrate to set your baseline.",
-  },
 };
 
 // MediaPipe pose connections for skeleton rendering
