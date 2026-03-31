@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
 
 /**
- * Header component with branding, session timer, and connection status.
+ * Header component with branding, session timer, and app controls.
+ * Buttons adapt based on the current app state.
  */
-export default function Header({ isActive, connectionStatus, onToggle }) {
+export default function Header({ 
+  isActive, 
+  connectionStatus, 
+  appState, 
+  onStartCalibration, 
+  onRecalibrate, 
+  onStop 
+}) {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -65,13 +73,45 @@ export default function Header({ isActive, connectionStatus, onToggle }) {
           </div>
         )}
 
-        <button
-          className={`btn ${isActive ? "btn--danger" : "btn--primary"}`}
-          onClick={onToggle}
-          id="toggle-monitoring-btn"
-        >
-          {isActive ? "⏹ Stop" : "▶ Start Monitoring"}
-        </button>
+        {/* Dynamic buttons based on app state */}
+        {appState === "idle" && (
+          <button
+            className="btn btn--primary"
+            onClick={onStartCalibration}
+            id="start-calibration-btn"
+          >
+            🎯 Start & Calibrate
+          </button>
+        )}
+
+        {appState === "calibrating" && (
+          <button
+            className="btn btn--danger"
+            onClick={onStop}
+            id="cancel-calibration-btn"
+          >
+            ✕ Cancel
+          </button>
+        )}
+
+        {appState === "monitoring" && (
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              className="btn"
+              onClick={onRecalibrate}
+              id="recalibrate-btn"
+            >
+              🎯 Recalibrate
+            </button>
+            <button
+              className="btn btn--danger"
+              onClick={onStop}
+              id="stop-monitoring-btn"
+            >
+              ⏹ Stop
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

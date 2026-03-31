@@ -2,7 +2,7 @@
 WebSocket router for real-time pose streaming.
 
 Receives JPEG frames from the frontend, processes them through
-MediaPipe + LSTM, and returns posture predictions.
+MediaPipe and calibration-based posture detection, and returns predictions.
 """
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -23,7 +23,8 @@ async def pose_websocket(websocket: WebSocket):
     """WebSocket endpoint for real-time posture detection.
 
     Protocol:
-        Client sends: Binary JPEG frame data
+        Client sends binary: JPEG frame data
+        Client sends text: JSON command (e.g. {"action": "calibrate"})
         Server responds: JSON with posture prediction and health risks
     """
     await websocket.accept()
@@ -40,25 +41,24 @@ async def pose_websocket(websocket: WebSocket):
         while True:
             # Receive message (either frame bytes or text command)
             msg = await websocket.receive()
+
+            # Handle text commands
             if "text" in msg:
                 try:
                     cmd = json.loads(msg["text"])
-                    if cmd.get("action") == "calibrate":
-                        success = posture_service.calibrate()
-                        if success:
-                            health_service.reset()
+                    if cmd.get("action") == "start_calibration":
+                        posture_service.start_calibration()
                         await websocket.send_json({
-                            "type": "calibration_result", 
-                            "success": success,
-                            "message": "Calibrated successfully!" if success else "Need more frames to calibrate."
+                            "type": "calibration_started",
+                            "message": "Calibration started. Please sit up straight and stay still.",
                         })
                 except Exception as e:
-                    logger.error(f"Failed parsing text message: {e}")
+                    logger.error(f"Failed parsing text command: {e}")
                 continue
 
             if "bytes" not in msg:
                 continue
-                
+
             data = msg["bytes"]
             frame_count += 1
 
@@ -66,7 +66,6 @@ async def pose_websocket(websocket: WebSocket):
             pose_result = pose_service.extract_landmarks(data)
 
             if pose_result is None:
-                # No pose detected
                 await websocket.send_json({
                     "type": "no_pose",
                     "message": "No person detected in frame",
@@ -74,7 +73,7 @@ async def pose_websocket(websocket: WebSocket):
                 })
                 continue
 
-            # Feed landmarks to LSTM service
+            # Feed landmarks to posture service
             prediction = posture_service.add_frame(
                 pose_result["key_landmarks"]
             )
@@ -87,40 +86,69 @@ async def pose_websocket(websocket: WebSocket):
             }
 
             if prediction is not None:
-                last_prediction = prediction
+                posture_class = prediction["posture_class"]
 
-                # Update health tracking
-                duration = health_service.update_tracking(
-                    prediction["posture_class"],
-                    frame_interval=0.067,  # ~15fps
-                )
-
-                # Get health risks
-                risks = health_service.get_health_risks(
-                    prediction["posture_class"],
-                    duration_seconds=duration,
-                )
-
-                response["type"] = "prediction"
-                response["posture"] = {
-                    "class": prediction["posture_class"],
-                    "confidence": prediction["confidence"],
-                    "probabilities": prediction.get("all_probs", {}),
-                    "is_good": prediction["posture_class"] in ["good_posture", "needs_calibration"],
-                }
-                response["health_risks"] = [
-                    {
-                        "name": r.name,
-                        "description": r.description,
-                        "severity": r.severity,
-                        "body_part": r.body_part,
-                        "recommendation": r.recommendation,
+                # Handle calibration states
+                if posture_class == "calibrating":
+                    response["type"] = "calibrating"
+                    response["calibration_progress"] = prediction.get("calibration_progress", 0)
+                    response["posture"] = {
+                        "class": "calibrating",
+                        "confidence": prediction["confidence"],
+                        "probabilities": {},
+                        "is_good": True,
                     }
-                    for r in risks
-                ]
-                response["tracking"] = health_service.get_summary()
+                elif posture_class == "calibration_complete":
+                    response["type"] = "calibration_complete"
+                    response["posture"] = {
+                        "class": "calibration_complete",
+                        "confidence": 1.0,
+                        "probabilities": {},
+                        "is_good": True,
+                    }
+                elif posture_class == "needs_calibration":
+                    response["type"] = "needs_calibration"
+                    response["posture"] = {
+                        "class": "needs_calibration",
+                        "confidence": 1.0,
+                        "probabilities": {},
+                        "is_good": True,
+                    }
+                else:
+                    # Normal prediction
+                    last_prediction = prediction
+                    response["type"] = "prediction"
+
+                    # Update health tracking
+                    duration = health_service.update_tracking(
+                        posture_class,
+                        frame_interval=0.1,  # ~10fps
+                    )
+
+                    risks = health_service.get_health_risks(
+                        posture_class,
+                        duration_seconds=duration,
+                    )
+
+                    response["posture"] = {
+                        "class": posture_class,
+                        "confidence": prediction["confidence"],
+                        "probabilities": prediction.get("all_probs", {}),
+                        "is_good": posture_class == "good_posture",
+                    }
+                    response["health_risks"] = [
+                        {
+                            "name": r.name,
+                            "description": r.description,
+                            "severity": r.severity,
+                            "body_part": r.body_part,
+                            "recommendation": r.recommendation,
+                        }
+                        for r in risks
+                    ]
+                    response["tracking"] = health_service.get_summary()
+
             elif last_prediction is not None:
-                # Send last known prediction with landmark update
                 response["posture"] = {
                     "class": last_prediction["posture_class"],
                     "confidence": last_prediction["confidence"],

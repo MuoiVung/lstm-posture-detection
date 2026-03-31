@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { WS_URL } from "../utils/constants";
 
 /**
@@ -10,7 +10,6 @@ export default function useWebSocket() {
   const [status, setStatus] = useState("disconnected"); // disconnected | connecting | connected
   const [lastMessage, setLastMessage] = useState(null);
   const wsRef = useRef(null);
-  const reconnectTimerRef = useRef(null);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -46,10 +45,6 @@ export default function useWebSocket() {
   }, []);
 
   const disconnect = useCallback(() => {
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
@@ -69,13 +64,6 @@ export default function useWebSocket() {
       wsRef.current.send(JSON.stringify(cmd));
     }
   }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      disconnect();
-    };
-  }, [disconnect]);
 
   return {
     status,

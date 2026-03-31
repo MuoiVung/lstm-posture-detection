@@ -902,3 +902,142 @@ body::before {
   width: 40px;
   flex-shrink: 0;
 }
+
+/* ─── Calibration Overlay ──────────────────────────── */
+.calibration-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 10, 26, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  border-radius: var(--radius-lg);
+  animation: fadeIn 0.3s ease;
+}
+
+.calibration-overlay--complete {
+  background: rgba(0, 212, 170, 0.12);
+}
+
+.calibration-overlay__content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-xl);
+}
+
+.calibration-overlay__icon {
+  font-size: 3rem;
+  animation: pulse-calibration 1.5s ease-in-out infinite;
+}
+
+.calibration-overlay__icon--success {
+  font-size: 4rem;
+  animation: bounceIn 0.5s ease;
+}
+
+.calibration-overlay__title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.calibration-overlay__instruction {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.calibration-overlay__subtitle {
+  font-size: 0.9rem;
+  color: var(--color-good);
+  font-weight: 500;
+}
+
+/* Circular progress ring */
+.calibration-overlay__progress-ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: var(--space-sm) 0;
+}
+
+.calibration-overlay__progress-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.calibration-overlay__ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 6;
+}
+
+.calibration-overlay__ring-fill {
+  fill: none;
+  stroke: url(#calibrationGradient);
+  stroke: var(--color-good);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s ease;
+}
+
+.calibration-overlay__progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.calibration-overlay__countdown {
+  font-family: var(--font-mono);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-good);
+  line-height: 1;
+  display: block;
+}
+
+.calibration-overlay__countdown-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.calibration-overlay__percent {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+@keyframes pulse-calibration {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
